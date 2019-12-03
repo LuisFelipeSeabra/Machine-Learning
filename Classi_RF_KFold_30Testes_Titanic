@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Spyder Editor
 
-Este é um arquivo de script temporário.
+Utilização de StratifiedKFold e utilização de 30 testes.
+Algoritmo Random Forest
+Base: Titanic
 """
 #importação da base
 import pandas as pd
