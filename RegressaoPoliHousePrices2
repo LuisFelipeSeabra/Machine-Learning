@@ -1,0 +1,59 @@
+# -*- coding: utf-8 -*-
+"""
+
+    Mae(3): 30660.561211963817
+    Mae(2): 21860.110863624166
+    Mae(1):25741.60231075384
+
+"""
+
+import pandas as pd
+base = pd.read_csv('trainHousePrices.csv')
+basecop = base
+
+###################### gráficos ######################
+corr = basecop.corr()
+listaNaoNulos = ['OverallQual','TotalBsmtSF','GrLivArea','GarageArea','SalePrice']
+
+
+############################################
+        
+###Apagando as colunas que não pertencem a Lista    
+i = 0
+for i in range(len(base.columns)):
+    if base.columns[i] in listaNaoNulos:
+        print(base.columns[i])
+    else:
+        basecop = basecop.drop(base.columns[i], axis =1)
+           
+# verificando se há algum valor nulo:        
+nulos = basecop.isnull().sum()
+
+#_____________________________________ETAPA2___________________________________
+
+#divisão da base em previsores e classe
+x = basecop.iloc[:,0:4].values
+y = basecop.iloc[:,4].values
+
+
+
+from sklearn.model_selection import train_test_split
+x_treinamento, x_teste, y_treinamento, y_teste = train_test_split(x,y,test_size = 0.3, random_state = 0 )
+
+
+from sklearn.preprocessing import PolynomialFeatures
+poly = PolynomialFeatures(degree = 2)
+# fit encaixa os dados; adaptar os dados
+x_treinamento_poly = poly.fit_transform(x_treinamento)
+x_teste_poly = poly.transform(x_teste)
+
+from sklearn.linear_model import LinearRegression
+regressor = LinearRegression()
+regressor.fit(x_treinamento_poly, y_treinamento)
+score = regressor.score(x_treinamento_poly, y_treinamento)
+
+previsoes = regressor.predict(x_teste_poly)
+
+from sklearn.metrics import mean_absolute_error
+mae = mean_absolute_error(y_teste,previsoes)
+
