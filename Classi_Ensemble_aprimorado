@@ -1,0 +1,307 @@
+'''
+
+SVC: 0.9330143540669856
+KNN: 0.84688995215311
+RF: 0.8373205741626795
+Ensemble: 0.8803827751196173
+
+'''
+#importação da base
+import pandas as pd
+base = pd.read_csv('train.csv')
+
+import numpy as np
+#########################Tratamento dos dados#####################################
+
+#########################Base_treino#####################################
+#substituindo valores nulos por 'S'
+
+datamissing = [base]
+for data in datamissing:
+        base['Embarked'] = base['Embarked'].fillna('S')
+
+# Substituindo letras por numeros
+def embarked(s):
+    if s =='S' :
+        return 1
+    elif s == 'C':
+        return 2
+    else:
+        return 3
+
+base['Embarked']=base['Embarked'].apply(embarked)
+       
+     
+#SEX
+gender = {'male': 0, 'female': 1}
+for data in base:
+    if data == 'Sex':
+        base['Sex'] = base['Sex'].map(gender)
+
+#exclui coluna B_Stance
+#base.drop(base['B_Stance'], axis = 0) # não funcionou?????
+#del base['Name']
+del base['PassengerId']
+del base['Ticket']
+del base['Cabin']
+
+
+data = [base]
+Title = {'Mr':1,'Miss':2,'Mrs':3,'Master':4,'Rare':5}
+
+for dataset in data:
+    dataset['Title'] = dataset.Name.str.extract('([A-Za-z]+)\.',expand = False)
+#Replace title with more common one
+    dataset['Title'] = dataset['Title'].replace(['Lady','Countess','Capt','Col','Don','Dr', 
+                                                'Major','Rev','Sir','Jonkheer','Dona'],'Rare')
+    dataset['Title'] = dataset['Title'].replace('Ms','Miss')
+    dataset['Title'] = dataset['Title'].replace('Mlle','Miss')
+    dataset['Title'] = dataset['Title'].replace('Mme','Mrs')
+    dataset['Title'] = dataset['Title'].map(Title)
+    dataset['Title'] = dataset['Title'].fillna(0)
+dataset['Title'].unique()
+del base['Name']
+
+#excluindo linhas de "Embarked" que possuam valores nulos
+#base = base.dropna(subset=['Embarked'])
+
+#localizando registros nulos e alterando pela média
+#base.loc[pd.isnull(base['B_avg_BODY_att']),'B_avg_BODY_att'] = base['B_avg_BODY_att'][base.B_avg_BODY_att>0].mean()
+colunas = []        
+colunas = base.columns 
+colunas = np.asarray(colunas)
+for i in range(colunas.size):   
+        if base[colunas[i]].isnull().sum() > 0:
+           # print( colunas[i])
+            base.loc[pd.isnull(base[colunas[i]]),colunas[i]] =  base[colunas[i]][base[colunas[i]]>0].mean()
+
+
+
+# AGE
+            
+data = [base]
+for dataset in data:
+    dataset['Age'] = dataset['Age'].astype(int)
+    dataset.loc[dataset['Age'] <=11,'Age'] =0
+    dataset.loc[(dataset['Age'] >11) & (dataset['Age']<=20),'Age'] = 1
+    dataset.loc[(dataset['Age'] >20) & (dataset['Age']<=25),'Age'] = 2
+    dataset.loc[(dataset['Age'] >25) & (dataset['Age']<=30),'Age'] = 3
+    dataset.loc[(dataset['Age'] >30) & (dataset['Age']<=38),'Age'] = 4
+    dataset.loc[(dataset['Age'] >38) & (dataset['Age']<=50),'Age'] = 5
+    dataset.loc[(dataset['Age'] >50) & (dataset['Age']<=62),'Age'] = 6
+    dataset.loc[dataset['Age']>62,'Age'] = 7
+
+base['Age'] = base['Age'].astype(int)
+
+base['Age'].value_counts()
+
+# FARE
+    
+from sklearn.preprocessing import LabelEncoder
+base['Fare'] = pd.qcut(base['Fare'],5)
+lbl = LabelEncoder()
+base['Fare'] = lbl.fit_transform(base['Fare'])
+    
+
+base['Fare'] = base['Fare'].astype(int)
+
+#criando nova coluna
+base['Survived2'] = base['Survived']
+del base['Survived']
+base.rename(columns={'Survived2':'Survived'}, inplace = True)
+
+#divisão da base em previsores e classe
+previsores_treinamento = base.iloc[:,0:8].values
+classe_treinamento = base.iloc[:,8].values
+
+
+#escalonamento- deixar os valores em esclas parecidas -> melhor desempenho
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+previsores = scaler.fit_transform(previsores_treinamento)
+
+
+
+
+
+#########################Base_teste#####################################
+
+
+
+
+#Verificando com a base de teste
+base_test = pd.read_csv('test.csv')
+final = pd.read_csv('gender_submission.csv')
+final =final['Survived']
+
+#substituindo valores nulos por 'S'
+datamissing = [base_test]
+for data in datamissing:
+        base_test['Embarked'] = base_test['Embarked'].fillna('S')
+
+# Substituindo letras por numeros
+
+def embarked(s):
+    if s =='S' :
+        return 1
+    elif s == 'C':
+        return 2
+    else:
+        return 3
+
+base_test['Embarked']=base_test['Embarked'].apply(embarked)
+       
+#SEX
+gender = {'male': 0, 'female': 1}
+for data in base_test:
+    if data == 'Sex':
+        base_test['Sex'] = base_test['Sex'].map(gender)
+
+#exclui coluna B_Stance
+#base.drop(base['B_Stance'], axis = 0) # não funcionou?????
+#del base['Name']
+        
+del base_test['PassengerId']
+del base_test['Ticket']
+del base_test['Cabin']
+
+data = [base_test]
+Title = {'Mr':1,'Miss':2,'Mrs':3,'Master':4,'Rare':5}
+
+for dataset in data:
+    dataset['Title'] = dataset.Name.str.extract('([A-Za-z]+)\.',expand = False)
+#Replace title with more common one
+    dataset['Title'] = dataset['Title'].replace(['Lady','Countess','Capt','Col','Don','Dr', 
+                                                'Major','Rev','Sir','Jonkheer','Dona'],'Rare')
+    dataset['Title'] = dataset['Title'].replace('Ms','Miss')
+    dataset['Title'] = dataset['Title'].replace('Mlle','Miss')
+    dataset['Title'] = dataset['Title'].replace('Mme','Mrs')
+    dataset['Title'] = dataset['Title'].map(Title)
+    dataset['Title'] = dataset['Title'].fillna(0)
+dataset['Title'].unique()
+del base_test['Name']
+
+#localizando registros nulos e alterando pela média
+#base.loc[pd.isnull(base['B_avg_BODY_att']),'B_avg_BODY_att'] = base['B_avg_BODY_att'][base.B_avg_BODY_att>0].mean()
+colunas = []        
+colunas = base_test.columns 
+colunas = np.asarray(colunas)
+for i in range(colunas.size):   
+        if base_test[colunas[i]].isnull().sum() > 0:
+           # print( colunas[i])
+            base_test.loc[pd.isnull(base_test[colunas[i]]),colunas[i]] =  base_test[colunas[i]][base_test[colunas[i]]>0].mean()
+
+# AGE
+data = [base_test]
+for dataset in data:
+    dataset['Age'] = dataset['Age'].astype(int)
+    dataset.loc[dataset['Age'] <=11,'Age'] =0
+    dataset.loc[(dataset['Age'] >11) & (dataset['Age']<=20),'Age'] = 1
+    dataset.loc[(dataset['Age'] >20) & (dataset['Age']<=25),'Age'] = 2
+    dataset.loc[(dataset['Age'] >25) & (dataset['Age']<=30),'Age'] = 3
+    dataset.loc[(dataset['Age'] >30) & (dataset['Age']<=38),'Age'] = 4
+    dataset.loc[(dataset['Age'] >38) & (dataset['Age']<=50),'Age'] = 5
+    dataset.loc[(dataset['Age'] >50) & (dataset['Age']<=62),'Age'] = 6
+    dataset.loc[dataset['Age']>62,'Age'] = 7
+
+base_test['Age'] = base_test['Age'].astype(int)
+base_test['Age'].value_counts()
+
+# FARE
+from sklearn.preprocessing import LabelEncoder
+base_test['Fare'] = pd.qcut(base_test['Fare'],5)
+lbl = LabelEncoder()
+base_test['Fare'] = lbl.fit_transform(base_test['Fare'])
+base_test['Fare'] = base_test['Fare'].astype(int)
+
+
+#divisão da base em previsores e classe
+previsores_teste = base_test.iloc[:,0:8].values
+classe_teste = final.values
+
+
+#aplicação do algorítmo (RANDOM FOREST)
+from sklearn.ensemble import RandomForestClassifier
+classificador_RF = RandomForestClassifier(n_estimators = 10, criterion = 'entropy')
+classificador_RF.fit(previsores_treinamento,classe_treinamento)
+previsao_RF =  classificador_RF.predict(previsores_teste)
+
+#Resultado  (RANDOM FOREST)
+from sklearn.metrics import confusion_matrix, accuracy_score
+precisao_RF = accuracy_score(classe_teste,previsao_RF)
+matriz_RF = confusion_matrix(classe_teste,previsao_RF)
+
+
+# importação da bibliotca(KNN)
+from sklearn.neighbors import KNeighborsClassifier
+classificador_KNN = KNeighborsClassifier(n_neighbors=5,metric='minkowski',  p=2)
+classificador_KNN.fit(previsores_treinamento,classe_treinamento)
+previsoes_KNN = classificador_KNN.predict(previsores_teste)
+
+#Resultado(KNN)
+from sklearn.metrics import confusion_matrix, accuracy_score
+precisao_KNN = accuracy_score(classe_teste,previsoes_KNN)
+matriz_KNN = confusion_matrix(classe_teste,previsoes_KNN)
+
+#importação da biblioteca (SVM)
+from sklearn.svm import SVC
+classificador_SVM = SVC(kernel = 'rbf', random_state= 1, C = 1)
+classificador_SVM.fit(previsores_treinamento,classe_treinamento)
+previsao_SVC = classificador_SVM.predict(previsores_teste)
+
+
+#Resultado (SVM)
+from sklearn.metrics import accuracy_score,confusion_matrix
+precisao_SVC = accuracy_score(previsao_SVC,classe_teste)
+matriz_SVC = confusion_matrix(previsao_SVC,classe_teste)
+
+
+#Predição de quem sobrevive ou não
+resposta_svm = classificador_SVM.predict(base_test)
+resposta_randomForest = classificador_RF.predict(base_test)
+resposta_knn = classificador_KNN.predict(base_test)
+
+# contadores:
+vive = 0
+nao_vive = 0
+resul_ensemble = []
+
+for i in range(len(base_test)):
+    if resposta_svm[i] ==1:
+        vive +=1
+    else: 
+        nao_vive +=1
+    
+    if resposta_randomForest[i] ==1:
+        vive +=1
+    else: 
+        nao_vive +=1
+    
+    if resposta_knn[i] ==1:
+        vive +=1
+    else: 
+        nao_vive +=1
+    
+    if vive > nao_vive:
+        resul_ensemble.append(1)
+        vive = 0
+        nao_vive = 0
+    else:
+        resul_ensemble.append(0)
+        vive = 0
+        nao_vive = 0
+
+
+######____________________________________________________________________########
+                                    #Resultado
+######____________________________________________________________________########
+        
+
+#Resultado
+from sklearn.metrics import confusion_matrix, accuracy_score
+precisao_ENSEMBLE = accuracy_score(classe_teste,resul_ensemble)
+matriz_ENSEMBLE = confusion_matrix(classe_teste,resul_ensemble)
+
+
+
+
