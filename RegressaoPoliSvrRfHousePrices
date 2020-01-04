@@ -1,0 +1,180 @@
+
+"""
+Kaggle: https://www.kaggle.com/c/house-prices-advanced-regression-techniques/overview
+
+Base de treino
+Regressão Polinomial:
+    Mae(3): 53129.31207045518
+    Mae(2): 53832.61780384571
+    Mae(1): 52072.41571232434
+    
+    Mse(3): 5052775129.87568
+    mse(2): 4817607949.320713
+    mse(1): 4305492339.061085
+    
+    rmsle(3) = 0.38862998624271317
+    rmsle(2) = 0.3879136543569028
+    rmsle(1) = NaN 
+    
+Random Forest: 
+    Mae(40): 53770.09383856572
+    Mae(70): 53230.63488383356
+    Mae(1):  55665.763669714484
+    
+    Mse(40): 5121250628.493682 
+    mse(70): 4994776278.526979
+    mse(1):  6077974389.635819
+    
+    rmsle(40) = 0.39268576120059956 
+    rmsle(70) = 0.3905389745859258
+    rmsle(1) =  0.41805751837534944
+
+
+   
+
+"""
+
+import pandas as pd
+base = pd.read_csv('train.csv')
+basecop = base
+
+import numpy as np
+
+
+
+import pandas as pd
+baseTest = pd.read_csv('test.csv')
+baseTeste = baseTest
+
+
+###################### gráficos ######################
+corr = basecop.corr()
+listaNaoNulos = ['OverallQual','TotalBsmtSF','GrLivArea','GarageArea','SalePrice']
+
+
+############################################
+        
+
+def rmsle(h, y): 
+    """
+    Compute the Root Mean Squared Log Error for hypthesis h and targets y
+    
+    Args:
+        h - numpy array containing predictions with shape (n_samples, n_targets)
+        y - numpy array containing targets with shape (n_samples, n_targets)
+    """
+    return np.sqrt(np.square(np.log(h + 1) - np.log(y + 1)).mean())
+
+
+
+###Apagando as colunas que não pertencem a Lista    
+i = 0
+for i in range(len(base.columns)):
+    if base.columns[i] in listaNaoNulos:
+        print(base.columns[i])
+    else:
+        basecop = basecop.drop(base.columns[i], axis =1)
+           
+# verificando se há algum valor nulo:        
+nulos = basecop.isnull().sum()
+
+i = 0
+for i in range(len(baseTest.columns)):
+    if baseTest.columns[i] in listaNaoNulos:
+        print(baseTest.columns[i])
+    else:
+        baseTeste = baseTeste.drop(baseTest.columns[i], axis =1)
+
+
+baseTest = baseTeste
+
+
+
+
+#localizando registros nulos 
+colunas = []        
+colunas = baseTest.columns 
+colunas = np.asarray(colunas)
+nullos = []
+for i in range(colunas.size):   
+        if baseTest[colunas[i]].isnull().sum() > 0:
+            #nullos.append(baseTest.loc[pd.isnull(baseTest[colunas[i]]),colunas[i]])
+            nullos.append(baseTest.loc[pd.isnull(baseTest[colunas[i]]),colunas[i]].index[0])
+
+
+
+for data in baseTest:
+    baseTest = baseTest.dropna(subset=[data])
+
+
+
+
+
+#_____________________________________ETAPA2___________________________________
+
+
+Result = pd.read_csv('sample_submission.csv')
+
+i = 0
+for i in nullos:
+    Result = Result.drop(i)
+
+#divisão da base em previsores e classe
+x_treinamento = basecop.iloc[:,0:4].values
+y_treinamento = basecop.iloc[:,4].values
+
+
+x_teste = baseTest.iloc[:,0:4].values
+y_teste = Result.iloc[:,1:2].values
+
+
+#Regressão Polinomial
+from sklearn.preprocessing import PolynomialFeatures
+poly = PolynomialFeatures(degree = 3)
+# fit encaixa os dados; adaptar os dados
+x_treinamento_poly = poly.fit_transform(x_treinamento)
+x_teste_poly = poly.transform(x_teste)
+
+from sklearn.linear_model import LinearRegression
+regressor = LinearRegression()
+regressor.fit(x_treinamento_poly, y_treinamento)
+score = regressor.score(x_treinamento_poly, y_treinamento)
+
+previsoes_RP = regressor.predict(x_teste_poly)
+
+from sklearn.metrics import mean_absolute_error
+mae_RP = mean_absolute_error(y_teste,previsoes_RP)
+
+from sklearn.metrics import mean_squared_error
+mse_RP = mean_squared_error(y_teste,previsoes_RP)
+
+rmsle_RP = rmsle(y_teste,previsoes_RP)
+
+#Random Forest
+from sklearn.ensemble import RandomForestRegressor
+regressor = RandomForestRegressor(n_estimators=200)
+regressor.fit(x_treinamento,y_treinamento)
+score= regressor.score(x_treinamento, y_treinamento)
+previsoes_RF = regressor.predict(x_teste)
+
+from sklearn.metrics import mean_absolute_error
+mae_RF = mean_absolute_error(y_teste,previsoes_RF)
+
+from sklearn.metrics import mean_squared_error
+mse_RF = mean_squared_error(y_teste,previsoes_RF)
+
+rmsle_RF = rmsle(y_teste,previsoes_RF)
+
+#SVR
+from sklearn.svm import SVR
+regressor_linear = SVR(kernel='poly', degree=2)
+regressor_linear.fit(x_treinamento,y_treinamento)
+previsoes_SVR_lin = regressor.predict(x_teste)
+
+from sklearn.metrics import mean_absolute_error
+mae_SVR_lin = mean_absolute_error(y_teste,previsoes_SVR_lin)
+
+from sklearn.metrics import mean_squared_error
+mse_SVR_lin = mean_squared_error(y_teste,previsoes_SVR_lin)
+
+rmsle_SVR_lin = rmsle(y_teste,previsoes_SVR_lin)
